@@ -32,6 +32,7 @@ export default function Home() {
   const [meds, setMeds] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Load from localStorage once on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -46,6 +47,7 @@ export default function Home() {
     }
   }, []);
 
+  // Save to localStorage whenever things change
   useEffect(() => {
     if (typeof window === "undefined") return;
     const payload = {
@@ -135,10 +137,10 @@ export default function Home() {
         const meds = e.meds ? `Meds: ${e.meds}` : "";
         const notes = e.notes ? `Notes: ${e.notes}` : "";
         const ciwa =
-          e.ciwa !== null && e.ciwa !== undefined
-            ? `CIWA: ${e.ciwa}`
-            : "";
-        const lineParts = [vitals, meds, notes, ciwa].filter(Boolean).join(" | ");
+          e.ciwa !== null && e.ciwa !== undefined ? `CIWA: ${e.ciwa}` : "";
+        const lineParts = [vitals, meds, notes, ciwa]
+          .filter(Boolean)
+          .join(" | ");
         return `${formatTime(e.timestamp)}\n${lineParts}\n`;
       })
       .join("\n");
@@ -147,6 +149,55 @@ export default function Home() {
   };
 
   const summaryText = generateSummaryText();
+
+  const handleExportData = async () => {
+    const payload = { clients, entries, selectedClientId };
+    const json = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(json);
+      alert(
+        "Full data JSON copied to clipboard.\nPaste it into a secure file to back it up."
+      );
+    } catch (err) {
+      console.error("Export error", err);
+      alert("Could not copy JSON to clipboard.");
+    }
+  };
+
+  const handleImportData = () => {
+    const raw = window.prompt(
+      "Paste previously exported Home Detox JSON here. This will overwrite current data."
+    );
+    if (!raw) return;
+    try {
+      const parsed = JSON.parse(raw);
+
+      if (Array.isArray(parsed.clients)) setClients(parsed.clients);
+      if (Array.isArray(parsed.entries)) setEntries(parsed.entries);
+      if (typeof parsed.selectedClientId === "string") {
+        setSelectedClientId(parsed.selectedClientId);
+      } else {
+        setSelectedClientId("");
+      }
+
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          clients: parsed.clients || [],
+          entries: parsed.entries || [],
+          selectedClientId:
+            typeof parsed.selectedClientId === "string"
+              ? parsed.selectedClientId
+              : "",
+        })
+      );
+
+      alert("Import complete.");
+    } catch (err) {
+      console.error("Import error", err);
+      alert("That didn’t look like valid JSON.");
+    }
+  };
 
   const handleCopySummary = async () => {
     if (!summaryText) return;
@@ -187,11 +238,14 @@ export default function Home() {
             Home Detox Navigator
           </h1>
           <p className="text-xs text-slate-400">
-            Private-pay, nurse-led documentation. Time-stamped, clean, defensible.
+            Private-pay, nurse-led documentation. Time-stamped, clean,
+            defensible.
           </p>
         </header>
 
+        {/* Top Row: Clients + New Entry */}
         <section className="grid gap-4 md:grid-cols-[260px,1fr]">
+          {/* Clients */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 space-y-3">
             <h2 className="text-[11px] font-semibold text-slate-200 uppercase tracking-[0.14em]">
               Clients
@@ -236,10 +290,12 @@ export default function Home() {
               ))}
             </div>
             <p className="text-[9px] text-slate-500">
-              This tool is for structured notes only. Use clinical judgment & MD orders.
+              This tool is for structured notes only. Use clinical judgment &
+              MD orders.
             </p>
           </div>
 
+          {/* New Entry Form */}
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 space-y-2">
             <div className="flex justify-between items-baseline gap-2">
               <h2 className="text-[11px] font-semibold text-slate-200 uppercase tracking-[0.14em]">
@@ -307,8 +363,10 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Bottom Row: Timeline + Summary */}
         {currentClient && (
           <section className="grid gap-4 md:grid-cols-[1.6fr,1.2fr]">
+            {/* Timeline */}
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3">
               <h2 className="text-[11px] font-semibold text-slate-200 uppercase tracking-[0.14em] mb-1">
                 Timeline – {currentClient.name}
@@ -334,38 +392,52 @@ export default function Home() {
                       {e.meds && <span>Meds: {e.meds}</span>}
                     </div>
                     {e.notes && (
-                      <div className="text-slate-400">
-                        {e.notes}
-                      </div>
+                      <div className="text-slate-400">{e.notes}</div>
                     )}
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Summary */}
             <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 flex flex-col gap-2">
               <h2 className="text-[11px] font-semibold text-slate-200 uppercase tracking-[0.14em]">
                 Aftercare Summary
               </h2>
               <p className="text-[9px] text-slate-500">
-                Copy into a letter or secure email for the client&apos;s ongoing clinician.
+                Copy into a letter or secure email for the client&apos;s ongoing
+                clinician.
               </p>
               <textarea
                 readOnly
                 value={summaryText}
                 className="flex-1 w-full rounded-xl bg-slate-950 border border-slate-800 px-3 py-2 text-[9px] text-slate-300 whitespace-pre-wrap min-h-[140px]"
               />
-              <div className="flex justify-between items-center gap-2">
+              <div className="flex flex-col gap-2 mt-1">
                 <p className="text-[8px] text-slate-500">
                   Demonstrates monitoring, meds, and escalation awareness.
                 </p>
-                <button
-                  onClick={handleCopySummary}
-                  disabled={!summaryText}
-                  className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-100 text-[9px] hover:bg-slate-700 disabled:opacity-40"
-                >
-                  Copy Summary
-                </button>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={handleExportData}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-100 text-[9px] hover:bg-slate-700"
+                  >
+                    Export JSON
+                  </button>
+                  <button
+                    onClick={handleImportData}
+                    className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-[9px] hover:border-amber-400"
+                  >
+                    Import JSON
+                  </button>
+                  <button
+                    onClick={handleCopySummary}
+                    disabled={!summaryText}
+                    className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-100 text-[9px] hover:bg-slate-700 disabled:opacity-40"
+                  >
+                    Copy Summary
+                  </button>
+                </div>
               </div>
             </div>
           </section>
