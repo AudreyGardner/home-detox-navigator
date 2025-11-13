@@ -420,12 +420,14 @@ export default function Home() {
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={handleExportData}
+                    title="Copies ALL clients and entries as JSON to your clipboard. After clicking, open a text editor (e.g. Notepad), paste, and save as a backup file."
                     className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-100 text-[9px] hover:bg-slate-700"
                   >
                     Export JSON
                   </button>
                   <button
                     onClick={handleImportData}
+                    title="Restores data from a JSON backup you previously exported. Paste the JSON text into the prompt to overwrite current data."
                     className="px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-slate-100 text-[9px] hover:border-amber-400"
                   >
                     Import JSON
@@ -433,6 +435,7 @@ export default function Home() {
                   <button
                     onClick={handleCopySummary}
                     disabled={!summaryText}
+                    title="Copies the Aftercare Summary text to your clipboard so you can paste it into a letter or secure message."
                     className="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-100 text-[9px] hover:bg-slate-700 disabled:opacity-40"
                   >
                     Copy Summary
